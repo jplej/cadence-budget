@@ -1,0 +1,63 @@
+# French translations
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fr\n"
+
+msgid "Welcome"
+msgstr "Bienvenue"
+
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Sign In"
+msgstr "Se connecter"
+
+msgid "Logout"
+msgstr "Déconnexion"
+
+msgid "Profile"
+msgstr "Profil"
+
+msgid "Get Started"
+msgstr "Commencer"
+
+msgid "API Docs"
+msgstr "Docs API"
+
+msgid "Home"
+msgstr "Accueil"
+
+msgid "Email"
+msgstr "E-mail"
+
+msgid "Password"
+msgstr "Mot de passe"
+
+msgid "Multi-Tenant"
+msgstr "Multi-locataire"
+
+msgid "Multi-Language"
+msgstr "Multilingue"
+
+msgid "REST API"
+msgstr "API REST"
+
+msgid "Welcome to SaaS"
+msgstr "Bienvenue sur SaaS"
+
+msgid "Invalid email or password."
+msgstr "E-mail ou mot de passe invalide."
+
+msgid "Tenant"
+msgstr "Locataire"
+
+msgid "Logged in as"
+msgstr "Connecté en tant que"
+
+msgid "Quick Actions"
+msgstr "Actions rapides"
+
+msgid "Go to Dashboard"
+msgstr "Aller au tableau de bord"

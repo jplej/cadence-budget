@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="hero min-h-[70vh]">
+  <div class="hero-content text-center">
+    <div class="max-w-md">
+      <h1 class="text-5xl font-bold">{% trans "Welcome to SaaS" %}</h1>
+      <p class="py-6 text-base-content/70">
+        {% trans "A powerful multi-tenant platform built with Django Ninja and DaisyUI." %}
+      </p>
+      <div class="flex gap-4 justify-center">
+        <a href="{% url 'login' %}" class="btn btn-primary">{% trans "Get Started" %}</a>
+        <a href="/api/docs" class="btn btn-outline">{% trans "API Docs" %}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 py-12">
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h2 class="card-title">{% trans "Multi-Tenant" %}</h2>
+      <p>{% trans "Each tenant gets its own isolated PostgreSQL schema." %}</p>
+    </div>
+  </div>
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h2 class="card-title">{% trans "Multi-Language" %}</h2>
+      <p>{% trans "Full i18n support with language switching." %}</p>
+    </div>
+  </div>
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h2 class="card-title">{% trans "REST API" %}</h2>
+      <p>{% trans "Type-safe API powered by Django Ninja." %}</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

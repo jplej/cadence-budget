@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="flex gap-4 mb-6">
+  <div class="stat bg-base-100 rounded-box shadow">
+    <div class="stat-title">{% trans "Tenant" %}</div>
+    <div class="stat-value text-lg">{{ request.tenant.name }}</div>
+    <div class="stat-desc">{{ request.tenant.schema_name }}</div>
+  </div>
+  <div class="stat bg-base-100 rounded-box shadow">
+    <div class="stat-title">{% trans "Logged in as" %}</div>
+    <div class="stat-value text-lg">{{ user.get_full_name|default:user.email }}</div>
+    <div class="stat-desc">{{ user.email }}</div>
+  </div>
+</div>
+
+<div class="card bg-base-100 shadow">
+  <div class="card-body">
+    <h2 class="card-title">{% trans "Quick Actions" %}</h2>
+    <div class="card-actions">
+      <a href="/api/docs" class="btn btn-outline btn-sm">{% trans "API Docs" %}</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
