@@ -7,6 +7,9 @@ class Partner(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="partners")
     name = models.CharField(max_length=200)
     is_internal = models.BooleanField(default=False)
+    contact_name = models.CharField(max_length=200, blank=True, default="")
+    contact_email = models.EmailField(blank=True, default="")
+    contact_phone = models.CharField(max_length=50, blank=True, default="")
 
     class Meta:
         ordering = ["name"]

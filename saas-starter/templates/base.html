@@ -4,34 +4,120 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}{{ title }}{% endblock %} — {{ request.tenant.name|default:"SaaS" }}</title>
-
-  <!-- DaisyUI via CDN (Tailwind CSS + DaisyUI) -->
+  <title>{% block title %}{{ title }}{% endblock %} — {{ request.tenant.name|default:"Cadence" }}</title>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
-
   {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen bg-base-200">
 
-  {% include "partials/navbar.html" %}
+<div class="{% if user.is_authenticated %}drawer lg:drawer-open{% endif %}">
+  {% if user.is_authenticated %}<input id="drawer-toggle" type="checkbox" class="drawer-toggle" />{% endif %}
 
-  <main class="container mx-auto px-4 py-8">
-    {% if messages %}
-      <div class="space-y-2 mb-6">
-        {% for message in messages %}
-          <div role="alert" class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}">
-            <span>{{ message }}</span>
-          </div>
-        {% endfor %}
+  <div class="{% if user.is_authenticated %}drawer-content {% endif %}flex flex-col min-h-screen">
+
+    {% if user.is_authenticated %}
+    <!-- Mobile top bar -->
+    <div class="navbar bg-base-100 shadow-sm lg:hidden">
+      <div class="navbar-start">
+        <label for="drawer-toggle" class="btn btn-ghost btn-square drawer-button">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </label>
       </div>
+      <div class="navbar-center font-bold text-lg">{{ request.tenant.name|default:"Cadence" }}</div>
+      <div class="navbar-end">{% include "partials/user-menu.html" %}</div>
+    </div>
+    <!-- Desktop top bar -->
+    <div class="navbar bg-base-100 shadow-sm hidden lg:flex justify-end px-6">
+      {% include "partials/user-menu.html" %}
+    </div>
     {% endif %}
 
-    {% block content %}{% endblock %}
-  </main>
+    <main class="flex-1 {% if user.is_authenticated %}container mx-auto px-6 py-6 max-w-6xl{% else %}container mx-auto px-4 py-8{% endif %}">
+      {% if messages %}
+        <div class="space-y-2 mb-4">
+          {% for message in messages %}
+            <div role="alert" class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}">
+              <span>{{ message }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
 
-  {% include "partials/footer.html" %}
+  </div>
 
+  {% if user.is_authenticated %}
+  <!-- Sidebar -->
+  <div class="drawer-side z-40">
+    <label for="drawer-toggle" class="drawer-overlay"></label>
+    <aside class="bg-base-100 w-64 min-h-screen flex flex-col shadow-lg">
+
+      <div class="px-6 py-5 border-b border-base-200">
+        <a href="{% url 'index' %}" class="text-xl font-bold tracking-tight">Cadence</a>
+        {% if request.tenant %}
+          <p class="text-xs text-base-content/50 mt-0.5">{{ request.tenant.name }}</p>
+        {% endif %}
+      </div>
+
+      <nav class="flex-1 px-3 py-4">
+        <ul class="menu menu-md gap-0.5">
+
+          <li class="menu-title text-xs uppercase tracking-wider opacity-50 px-3 mb-1">{% trans "Projects" %}</li>
+          <li>
+            <a href="#" class="{% block nav_projects %}{% endblock %}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/>
+              </svg>
+              {% trans "Projects" %}
+            </a>
+          </li>
+
+          <div class="divider my-1 opacity-30"></div>
+
+          <li class="menu-title text-xs uppercase tracking-wider opacity-50 px-3 mb-1">{% trans "Configuration" %}</li>
+          <li>
+            <a href="{% url 'list_partners' %}" class="{% block nav_partners %}{% endblock %}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2h5m6 0v-4m0 0a4 4 0 10-8 0m8 0H9"/>
+              </svg>
+              {% trans "Partners" %}
+            </a>
+          </li>
+          <li>
+            <a href="#" class="{% block nav_categories %}{% endblock %}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h10M7 12h6M7 17h4"/>
+              </svg>
+              {% trans "Categories" %}
+            </a>
+          </li>
+
+          <div class="divider my-1 opacity-30"></div>
+
+          <li class="menu-title text-xs uppercase tracking-wider opacity-50 px-3 mb-1">{% trans "Analytics" %}</li>
+          <li>
+            <a href="#" class="{% block nav_portfolio %}{% endblock %}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm6 0V9a2 2 0 00-2-2h-2a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2zm6 0V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v14a2 2 0 002 2h2a2 2 0 002-2z"/>
+              </svg>
+              {% trans "Portfolio" %}
+            </a>
+          </li>
+
+        </ul>
+      </nav>
+
+    </aside>
+  </div>
+  {% endif %}
+
+</div>
+
+  <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block nav_partners %}active{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">{% trans "Partners" %}</h1>
+  <label for="modal-add-partner" class="btn btn-primary btn-sm">{% trans "Add Partner" %}</label>
+</div>
+
+<!-- Partner table -->
+<div class="card bg-base-100 shadow">
+  <div class="card-body p-0">
+    {% if partners %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th>{% trans "Name" %}</th>
+              <th>{% trans "Contact" %}</th>
+              <th>{% trans "Type" %}</th>
+              <th class="w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for partner in partners %}
+            <tr>
+              <td class="font-medium">{{ partner.name }}</td>
+              <td>
+                {% if partner.contact_name %}
+                  <div class="text-sm">{{ partner.contact_name }}</div>
+                {% endif %}
+                {% if partner.contact_email %}
+                  <div class="text-xs text-base-content/60">{{ partner.contact_email }}</div>
+                {% endif %}
+                {% if partner.contact_phone %}
+                  <div class="text-xs text-base-content/60">{{ partner.contact_phone }}</div>
+                {% endif %}
+                {% if not partner.contact_name and not partner.contact_email and not partner.contact_phone %}
+                  <span class="text-base-content/30 text-sm">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if partner.is_internal %}
+                  <span class="badge badge-info badge-sm">{% trans "Internal" %}</span>
+                {% else %}
+                  <span class="badge badge-ghost badge-sm">{% trans "External" %}</span>
+                {% endif %}
+              </td>
+              <td class="text-right">
+                <div class="flex gap-2 justify-end">
+                  <label for="modal-edit-{{ partner.id }}" class="btn btn-xs btn-outline">{% trans "Edit" %}</label>
+                  <form method="post" action="{% url 'delete_partner' partner.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-error btn-outline"
+                      onclick="return confirm('{% trans "Delete this partner?" %}')">{% trans "Delete" %}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="px-6 py-12 text-center text-base-content/40">
+        {% trans "No partners yet." %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Add partner modal -->
+<input type="checkbox" id="modal-add-partner" class="modal-toggle" {% if error %}checked{% endif %} />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Add Partner" %}</h3>
+    <form method="post" action="{% url 'list_partners' %}">
+      {% csrf_token %}
+      {% if error %}
+        <div role="alert" class="alert alert-error mb-4">
+          <span>{{ error }}</span>
+        </div>
+      {% endif %}
+
+      <div class="form-control mb-3">
+        <label class="label" for="add-name"><span class="label-text font-medium">{% trans "Name" %} *</span></label>
+        <input id="add-name" name="name" type="text" class="input input-bordered" required autofocus />
+      </div>
+
+      <div class="form-control mb-3">
+        <label class="label cursor-pointer justify-start gap-3">
+          <input name="is_internal" type="checkbox" class="checkbox checkbox-sm" />
+          <span class="label-text">{% trans "Internal (our organization)" %}</span>
+        </label>
+      </div>
+
+      <div class="divider text-xs opacity-50">{% trans "Contact (optional)" %}</div>
+
+      <div class="form-control mb-3">
+        <label class="label" for="add-contact-name"><span class="label-text">{% trans "Contact name" %}</span></label>
+        <input id="add-contact-name" name="contact_name" type="text" class="input input-bordered input-sm" />
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="form-control">
+          <label class="label" for="add-contact-email"><span class="label-text">{% trans "Email" %}</span></label>
+          <input id="add-contact-email" name="contact_email" type="email" class="input input-bordered input-sm" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="add-contact-phone"><span class="label-text">{% trans "Phone" %}</span></label>
+          <input id="add-contact-phone" name="contact_phone" type="tel" class="input input-bordered input-sm" />
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <label for="modal-add-partner" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <button type="submit" class="btn btn-primary">{% trans "Add" %}</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="modal-add-partner"></label>
+</div>
+
+<!-- Edit partner modals (one per partner) -->
+{% for partner in partners %}
+<input type="checkbox" id="modal-edit-{{ partner.id }}" class="modal-toggle"
+  {% if edit_partner_id == partner.id %}checked{% endif %} />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Edit Partner" %}</h3>
+    <form method="post" action="{% url 'edit_partner' partner.id %}">
+      {% csrf_token %}
+      {% if edit_partner_id == partner.id and edit_error %}
+        <div role="alert" class="alert alert-error mb-4">
+          <span>{{ edit_error }}</span>
+        </div>
+      {% endif %}
+
+      <div class="form-control mb-3">
+        <label class="label" for="edit-name-{{ partner.id }}"><span class="label-text font-medium">{% trans "Name" %} *</span></label>
+        <input id="edit-name-{{ partner.id }}" name="name" type="text" class="input input-bordered" value="{{ partner.name }}" required />
+      </div>
+
+      <div class="form-control mb-3">
+        <label class="label cursor-pointer justify-start gap-3">
+          <input name="is_internal" type="checkbox" class="checkbox checkbox-sm" {% if partner.is_internal %}checked{% endif %} />
+          <span class="label-text">{% trans "Internal (our organization)" %}</span>
+        </label>
+      </div>
+
+      <div class="divider text-xs opacity-50">{% trans "Contact (optional)" %}</div>
+
+      <div class="form-control mb-3">
+        <label class="label" for="edit-contact-name-{{ partner.id }}"><span class="label-text">{% trans "Contact name" %}</span></label>
+        <input id="edit-contact-name-{{ partner.id }}" name="contact_name" type="text" class="input input-bordered input-sm" value="{{ partner.contact_name }}" />
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="form-control">
+          <label class="label" for="edit-contact-email-{{ partner.id }}"><span class="label-text">{% trans "Email" %}</span></label>
+          <input id="edit-contact-email-{{ partner.id }}" name="contact_email" type="email" class="input input-bordered input-sm" value="{{ partner.contact_email }}" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="edit-contact-phone-{{ partner.id }}"><span class="label-text">{% trans "Phone" %}</span></label>
+          <input id="edit-contact-phone-{{ partner.id }}" name="contact_phone" type="tel" class="input input-bordered input-sm" value="{{ partner.contact_phone }}" />
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <label for="modal-edit-{{ partner.id }}" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="modal-edit-{{ partner.id }}"></label>
+</div>
+{% endfor %}
+{% endblock %}

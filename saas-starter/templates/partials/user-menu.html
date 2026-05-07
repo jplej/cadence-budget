@@ -1,0 +1,27 @@
+{% load i18n %}
+<div class="flex items-center gap-3">
+  <!-- Language switcher -->
+  <form action="{% url 'set_language' %}" method="post" class="flex items-center">
+    {% csrf_token %}
+    <input name="next" type="hidden" value="{{ request.path }}" />
+    <select name="language" onchange="this.form.submit()" class="select select-sm select-bordered">
+      {% get_current_language as LANGUAGE_CODE %}
+      {% get_available_languages as LANGUAGES %}
+      {% for lang_code, lang_name in LANGUAGES %}
+        <option value="{{ lang_code }}" {% if lang_code == LANGUAGE_CODE %}selected{% endif %}>{{ lang_name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <div class="dropdown dropdown-end">
+    <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar placeholder">
+      <div class="bg-neutral text-neutral-content rounded-full w-8">
+        <span class="text-sm">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
+      </div>
+    </div>
+    <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 p-2 shadow">
+      <li class="menu-title text-xs opacity-50">{{ user.email }}</li>
+      <li><a href="{% url 'logout' %}">{% trans "Logout" %}</a></li>
+    </ul>
+  </div>
+</div>

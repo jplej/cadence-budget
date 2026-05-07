@@ -11,6 +11,7 @@ urlpatterns = [
     path("", include("apps.tenants.urls")),
     path("", include("apps.users.urls")),
     path("", include("apps.core.urls")),
+    path("", include("apps.budget.urls")),
 ]
 
 if settings.DEBUG:
