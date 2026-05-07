@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block nav_categories %}active{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">{% trans "Categories" %}</h1>
+  <label for="modal-add-category" class="btn btn-primary btn-sm">{% trans "Add Category" %}</label>
+</div>
+
+<!-- Category table -->
+<div class="card bg-base-100 shadow">
+  <div class="card-body p-0">
+    {% if categories %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th class="w-28">{% trans "Code" %}</th>
+              <th>{% trans "Name" %}</th>
+              <th>{% trans "Group" %}</th>
+              <th class="w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for category in categories %}
+            <tr>
+              <td class="font-mono text-sm text-base-content/60">{{ category.code|default:"—" }}</td>
+              <td class="font-medium">{{ category.name }}</td>
+              <td class="text-sm text-base-content/60">{{ category.parent.name|default:"—" }}</td>
+              <td class="text-right">
+                <div class="flex gap-2 justify-end">
+                  <label for="modal-edit-{{ category.id }}" class="btn btn-xs btn-outline">{% trans "Edit" %}</label>
+                  <form method="post" action="{% url 'delete_category' category.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-error btn-outline"
+                      onclick="return confirm('{% trans "Delete this category?" %}')">{% trans "Delete" %}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="px-6 py-12 text-center text-base-content/40">
+        {% trans "No categories yet." %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Add category modal -->
+<input type="checkbox" id="modal-add-category" class="modal-toggle" {% if error %}checked{% endif %} />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Add Category" %}</h3>
+    <form method="post" action="{% url 'list_categories' %}">
+      {% csrf_token %}
+      {% if error %}
+        <div role="alert" class="alert alert-error mb-4">
+          <span>{{ error }}</span>
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="form-control">
+          <label class="label" for="add-code"><span class="label-text">{% trans "Code" %}</span></label>
+          <input id="add-code" name="code" type="text" class="input input-bordered input-sm font-mono" placeholder="e.g. 606" />
+        </div>
+        <div class="form-control col-span-2">
+          <label class="label" for="add-name"><span class="label-text font-medium">{% trans "Name" %} *</span></label>
+          <input id="add-name" name="name" type="text" class="input input-bordered input-sm" required autofocus />
+        </div>
+      </div>
+
+      <div class="form-control mb-4">
+        <label class="label" for="add-parent"><span class="label-text">{% trans "Group (optional)" %}</span></label>
+        <select id="add-parent" name="parent_id" class="select select-bordered select-sm">
+          <option value="">—</option>
+          {% for cat in top_level %}
+            <option value="{{ cat.id }}">{% if cat.code %}{{ cat.code }} – {% endif %}{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="modal-action">
+        <label for="modal-add-category" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <button type="submit" class="btn btn-primary">{% trans "Add" %}</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="modal-add-category"></label>
+</div>
+
+<!-- Edit category modals (one per category) -->
+{% for category in categories %}
+<input type="checkbox" id="modal-edit-{{ category.id }}" class="modal-toggle"
+  {% if edit_category_id == category.id %}checked{% endif %} />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Edit Category" %}</h3>
+    <form method="post" action="{% url 'edit_category' category.id %}">
+      {% csrf_token %}
+      {% if edit_category_id == category.id and edit_error %}
+        <div role="alert" class="alert alert-error mb-4">
+          <span>{{ edit_error }}</span>
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div class="form-control">
+          <label class="label" for="edit-code-{{ category.id }}"><span class="label-text">{% trans "Code" %}</span></label>
+          <input id="edit-code-{{ category.id }}" name="code" type="text" class="input input-bordered input-sm font-mono" value="{{ category.code }}" placeholder="e.g. 606" />
+        </div>
+        <div class="form-control col-span-2">
+          <label class="label" for="edit-name-{{ category.id }}"><span class="label-text font-medium">{% trans "Name" %} *</span></label>
+          <input id="edit-name-{{ category.id }}" name="name" type="text" class="input input-bordered input-sm" value="{{ category.name }}" required />
+        </div>
+      </div>
+
+      <div class="form-control mb-4">
+        <label class="label" for="edit-parent-{{ category.id }}"><span class="label-text">{% trans "Group (optional)" %}</span></label>
+        <select id="edit-parent-{{ category.id }}" name="parent_id" class="select select-bordered select-sm">
+          <option value="">—</option>
+          {% for cat in top_level %}
+            {% if cat.id != category.id %}
+              <option value="{{ cat.id }}" {% if category.parent_id == cat.id %}selected{% endif %}>
+                {% if cat.code %}{{ cat.code }} – {% endif %}{{ cat.name }}
+              </option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="modal-action">
+        <label for="modal-edit-{{ category.id }}" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="modal-edit-{{ category.id }}"></label>
+</div>
+{% endfor %}
+{% endblock %}

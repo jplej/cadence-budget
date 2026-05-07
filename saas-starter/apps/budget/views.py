@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from .models import Partner
+from .models import Category, Partner
 
 
 def _require_tenant(request):
@@ -78,3 +78,79 @@ def delete_partner(request, partner_id):
     if request.method == "POST":
         partner.delete()
     return redirect("list_partners")
+
+
+def _category_fields_from_post(post, tenant):
+    parent_id = post.get("parent_id", "").strip()
+    parent = None
+    if parent_id:
+        try:
+            parent = Category.objects.get(id=int(parent_id), tenant=tenant, parent=None)
+        except (Category.DoesNotExist, ValueError):
+            pass
+    return {
+        "name": post.get("name", "").strip(),
+        "code": post.get("code", "").strip(),
+        "parent": parent,
+    }
+
+
+@login_required
+def list_categories(request):
+    _require_tenant(request)
+    categories = Category.objects.filter(tenant=request.tenant).select_related("parent")
+    top_level = Category.objects.filter(tenant=request.tenant, parent=None)
+    error = None
+    edit_category_id = None
+    edit_error = None
+
+    if request.method == "POST":
+        fields = _category_fields_from_post(request.POST, request.tenant)
+        if not fields["name"]:
+            error = _("Name is required.")
+        else:
+            Category.objects.create(tenant=request.tenant, **fields)
+            return redirect("list_categories")
+
+    try:
+        edit_category_id = int(request.GET.get("edit", ""))
+    except (ValueError, TypeError):
+        pass
+    edit_error = request.GET.get("error_edit", "")
+
+    return render(request, "budget/categories.html", {
+        "title": _("Categories"),
+        "categories": categories,
+        "top_level": top_level,
+        "error": error,
+        "edit_category_id": edit_category_id,
+        "edit_error": edit_error,
+    })
+
+
+@login_required
+def edit_category(request, category_id):
+    _require_tenant(request)
+    category = get_object_or_404(Category, id=category_id, tenant=request.tenant)
+
+    if request.method == "POST":
+        fields = _category_fields_from_post(request.POST, request.tenant)
+        if not fields["name"]:
+            params = urlencode({"edit": category_id, "error_edit": str(_("Name is required."))})
+            return redirect(f"{reverse('list_categories')}?{params}")
+        # prevent a category from becoming its own parent
+        if fields["parent"] and fields["parent"].id == category.id:
+            fields["parent"] = None
+        for attr, value in fields.items():
+            setattr(category, attr, value)
+        category.save()
+    return redirect("list_categories")
+
+
+@login_required
+def delete_category(request, category_id):
+    _require_tenant(request)
+    category = get_object_or_404(Category, id=category_id, tenant=request.tenant)
+    if request.method == "POST":
+        category.delete()
+    return redirect("list_categories")

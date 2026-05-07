@@ -20,6 +20,10 @@ class Partner(models.Model):
 
 class Category(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="categories")
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="children"
+    )
+    code = models.CharField(max_length=20, blank=True, default="")
     name = models.CharField(max_length=200)
 
     class Meta:
@@ -27,7 +31,7 @@ class Category(models.Model):
         verbose_name_plural = "categories"
 
     def __str__(self):
-        return self.name
+        return f"{self.code} – {self.name}" if self.code else self.name
 
 
 class Project(models.Model):
