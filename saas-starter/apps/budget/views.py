@@ -6,7 +6,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from .models import Category, Partner, Project, ProjectTag
+from decimal import Decimal, InvalidOperation
+
+from .models import Category, Partner, Project, ProjectParticipation, ProjectTag
 
 
 def _require_tenant(request):
@@ -157,10 +159,9 @@ def delete_category(request, category_id):
 
 
 def _tags_from_input(raw):
-    """Parse comma/space separated tag input into cleaned ltree-safe strings."""
     tags = []
     for token in raw.replace(",", " ").split():
-        token = token.strip().lower().replace(" ", "_")
+        token = token.strip().lower().replace(" ", "_").replace("/", ".")
         if token:
             tags.append(token)
     return tags
@@ -204,7 +205,7 @@ def edit_project(request, project_id=None):
             for tag in _tags_from_input(tags_raw):
                 ProjectTag.objects.create(project=project, tag=tag)
 
-            return redirect("list_projects")
+            return redirect("project_detail", project_id=project.id)
 
     tags_value = ", ".join(t.tag.replace(".", "/") for t in project.tags.all()) if project else ""
     return render(request, "budget/project_form.html", {
@@ -222,3 +223,104 @@ def delete_project(request, project_id):
     if request.method == "POST":
         project.delete()
     return redirect("list_projects")
+
+
+@login_required
+def project_detail(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    participations = project.participations.select_related("partner").order_by("partner__name")
+    total_share = sum((p.share_percent for p in participations), Decimal("0"))
+    remaining = Decimal("100") - total_share
+
+    already_in = participations.values_list("partner_id", flat=True)
+    available_partners = Partner.objects.filter(tenant=request.tenant).exclude(id__in=already_in)
+
+    add_error = request.GET.get("add_error", "")
+    edit_part_id = None
+    edit_error = None
+    try:
+        edit_part_id = int(request.GET.get("edit", ""))
+    except (ValueError, TypeError):
+        pass
+    edit_error = request.GET.get("error_edit", "")
+
+    return render(request, "budget/project_detail.html", {
+        "title": project.name,
+        "project": project,
+        "participations": participations,
+        "total_share": total_share,
+        "remaining": remaining,
+        "available_partners": available_partners,
+        "add_error": add_error,
+        "edit_part_id": edit_part_id,
+        "edit_error": edit_error,
+    })
+
+
+def _validate_share(share_str, existing_total, current_share=Decimal("0")):
+    """Return (share, error_string). existing_total excludes current_share."""
+    try:
+        share = Decimal(share_str)
+    except (InvalidOperation, TypeError):
+        return None, str(_("Invalid share percentage."))
+    if share <= 0:
+        return None, str(_("Share must be greater than 0."))
+    if existing_total + share > 100:
+        remaining = Decimal("100") - existing_total
+        return None, str(_("Only %(r)s%% remaining.") % {"r": remaining})
+    return share, None
+
+
+@login_required
+def add_participation(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+
+    if request.method == "POST":
+        partner_id = request.POST.get("partner_id", "").strip()
+        existing_total = sum(
+            (p.share_percent for p in project.participations.all()), Decimal("0")
+        )
+        share, error = _validate_share(request.POST.get("share_percent", ""), existing_total)
+        if error:
+            params = urlencode({"add_error": error})
+            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+        try:
+            partner = Partner.objects.get(id=int(partner_id), tenant=request.tenant)
+        except (Partner.DoesNotExist, ValueError):
+            params = urlencode({"add_error": str(_("Invalid partner."))})
+            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+        ProjectParticipation.objects.create(project=project, partner=partner, share_percent=share)
+
+    return redirect("project_detail", project_id=project_id)
+
+
+@login_required
+def edit_participation(request, project_id, part_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    participation = get_object_or_404(ProjectParticipation, id=part_id, project=project)
+
+    if request.method == "POST":
+        other_total = sum(
+            (p.share_percent for p in project.participations.exclude(id=part_id)), Decimal("0")
+        )
+        share, error = _validate_share(request.POST.get("share_percent", ""), other_total)
+        if error:
+            params = urlencode({"edit": part_id, "error_edit": error})
+            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+        participation.share_percent = share
+        participation.save()
+
+    return redirect("project_detail", project_id=project_id)
+
+
+@login_required
+def delete_participation(request, project_id, part_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    participation = get_object_or_404(ProjectParticipation, id=part_id, project=project)
+    if request.method == "POST":
+        participation.delete()
+    return redirect("project_detail", project_id=project_id)

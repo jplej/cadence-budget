@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+
+  <!-- Header -->
+  <div class="flex items-start justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'list_projects' %}" class="btn btn-ghost btn-sm btn-square">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-2xl font-bold">{{ project.name }}</h1>
+        {% if project.tags.all %}
+          <div class="flex flex-wrap gap-1 mt-1">
+            {% for tag in project.tags.all %}
+              <span class="badge badge-outline badge-sm font-mono">{{ tag }}</span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'edit_project' project.id %}" class="btn btn-sm btn-outline">{% trans "Edit" %}</a>
+      <form method="post" action="{% url 'delete_project' project.id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-error btn-outline"
+          onclick="return confirm('{% trans "Delete this project?" %}')">{% trans "Delete" %}</button>
+      </form>
+    </div>
+  </div>
+
+  {% if project.description %}
+    <p class="text-base-content/60 mb-6">{{ project.description }}</p>
+  {% endif %}
+
+  <!-- Participations -->
+  <div class="card bg-base-100 shadow mb-6">
+    <div class="card-body">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="card-title text-base">{% trans "Participations" %}</h2>
+        {% if available_partners %}
+          <label for="modal-add-participation" class="btn btn-sm btn-primary">{% trans "Add" %}</label>
+        {% endif %}
+      </div>
+
+      {% if participations %}
+        <table class="table w-full">
+          <thead>
+            <tr>
+              <th>{% trans "Partner" %}</th>
+              <th class="text-right">{% trans "Share %" %}</th>
+              <th class="w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in participations %}
+            <tr>
+              <td>
+                {{ p.partner.name }}
+                {% if p.partner.is_internal %}
+                  <span class="badge badge-info badge-xs ml-1">{% trans "us" %}</span>
+                {% endif %}
+              </td>
+              <td class="text-right font-mono">{{ p.share_percent }}%</td>
+              <td class="text-right">
+                <div class="flex gap-1 justify-end">
+                  <label for="modal-edit-part-{{ p.id }}" class="btn btn-xs btn-outline">{% trans "Edit" %}</label>
+                  <form method="post" action="{% url 'delete_participation' project.id p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-error btn-outline"
+                      onclick="return confirm('{% trans "Remove this participant?" %}')">{% trans "Remove" %}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td class="text-sm text-base-content/50">{% trans "Total" %}</td>
+              <td class="text-right font-mono font-bold
+                {% if total_share == 100 %}text-success{% elif total_share > 100 %}text-error{% else %}text-warning{% endif %}">
+                {{ total_share }}%
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        {% if total_share < 100 %}
+          <div class="text-xs text-warning mt-2">
+            {% blocktrans with r=remaining %}{{ r }}% still unallocated{% endblocktrans %}
+          </div>
+        {% endif %}
+
+      {% else %}
+        <p class="text-base-content/40 text-sm">{% trans "No participants yet." %}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Waterfall placeholder -->
+  <div class="card bg-base-100 shadow opacity-50">
+    <div class="card-body">
+      <h2 class="card-title text-base">{% trans "Waterfall" %}</h2>
+      <p class="text-sm text-base-content/40">{% trans "Coming soon." %}</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Add participation modal -->
+<input type="checkbox" id="modal-add-participation" class="modal-toggle" {% if add_error %}checked{% endif %} />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Add Participant" %}</h3>
+    <form method="post" action="{% url 'add_participation' project.id %}">
+      {% csrf_token %}
+      {% if add_error %}
+        <div role="alert" class="alert alert-error mb-4"><span>{{ add_error }}</span></div>
+      {% endif %}
+
+      <div class="form-control mb-3">
+        <label class="label" for="add-partner"><span class="label-text font-medium">{% trans "Partner" %} *</span></label>
+        <select id="add-partner" name="partner_id" class="select select-bordered" required>
+          <option value="">—</option>
+          {% for partner in available_partners %}
+            <option value="{{ partner.id }}">
+              {{ partner.name }}{% if partner.is_internal %} ({% trans "us" %}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-control mb-4">
+        <label class="label" for="add-share">
+          <span class="label-text font-medium">{% trans "Share %" %} *</span>
+          <span class="label-text-alt text-base-content/50">
+            {% blocktrans with r=remaining %}{{ r }}% available{% endblocktrans %}
+          </span>
+        </label>
+        <input id="add-share" name="share_percent" type="number" min="0.01" max="{{ remaining }}"
+          step="0.01" class="input input-bordered" required />
+      </div>
+
+      <div class="modal-action">
+        <label for="modal-add-participation" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <button type="submit" class="btn btn-primary">{% trans "Add" %}</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="modal-add-participation"></label>
+</div>
+
+<!-- Edit participation modals -->
+{% for p in participations %}
+<input type="checkbox" id="modal-edit-part-{{ p.id }}" class="modal-toggle"
+  {% if edit_part_id == p.id %}checked{% endif %} />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{{ p.partner.name }}</h3>
+    <form method="post" action="{% url 'edit_participation' project.id p.id %}">
+      {% csrf_token %}
+      {% if edit_part_id == p.id and edit_error %}
+        <div role="alert" class="alert alert-error mb-4"><span>{{ edit_error }}</span></div>
+      {% endif %}
+
+      <div class="form-control mb-4">
+        <label class="label" for="edit-share-{{ p.id }}">
+          <span class="label-text font-medium">{% trans "Share %" %} *</span>
+        </label>
+        <input id="edit-share-{{ p.id }}" name="share_percent" type="number" min="0.01" max="100"
+          step="0.01" class="input input-bordered" value="{{ p.share_percent }}" required />
+      </div>
+
+      <div class="modal-action">
+        <label for="modal-edit-part-{{ p.id }}" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+      </div>
+    </form>
+  </div>
+  <label class="modal-backdrop" for="modal-edit-part-{{ p.id }}"></label>
+</div>
+{% endfor %}
+
+{% endblock %}

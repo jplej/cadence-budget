@@ -11,6 +11,10 @@ urlpatterns = [
     path("categories/<int:category_id>/delete/", views.delete_category, name="delete_category"),
     path("projects/", views.list_projects, name="list_projects"),
     path("projects/new/", views.edit_project, name="new_project"),
-    path("projects/<int:project_id>/", views.edit_project, name="edit_project"),
+    path("projects/<int:project_id>/", views.project_detail, name="project_detail"),
+    path("projects/<int:project_id>/edit/", views.edit_project, name="edit_project"),
     path("projects/<int:project_id>/delete/", views.delete_project, name="delete_project"),
+    path("projects/<int:project_id>/participations/add/", views.add_participation, name="add_participation"),
+    path("projects/<int:project_id>/participations/<int:part_id>/edit/", views.edit_participation, name="edit_participation"),
+    path("projects/<int:project_id>/participations/<int:part_id>/delete/", views.delete_participation, name="delete_participation"),
 ]
