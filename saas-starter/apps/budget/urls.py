@@ -9,4 +9,8 @@ urlpatterns = [
     path("categories/", views.list_categories, name="list_categories"),
     path("categories/<int:category_id>/edit/", views.edit_category, name="edit_category"),
     path("categories/<int:category_id>/delete/", views.delete_category, name="delete_category"),
+    path("projects/", views.list_projects, name="list_projects"),
+    path("projects/new/", views.edit_project, name="new_project"),
+    path("projects/<int:project_id>/", views.edit_project, name="edit_project"),
+    path("projects/<int:project_id>/delete/", views.delete_project, name="delete_project"),
 ]

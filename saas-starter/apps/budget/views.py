@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from .models import Category, Partner
+from .models import Category, Partner, Project, ProjectTag
 
 
 def _require_tenant(request):
@@ -154,3 +154,71 @@ def delete_category(request, category_id):
     if request.method == "POST":
         category.delete()
     return redirect("list_categories")
+
+
+def _tags_from_input(raw):
+    """Parse comma/space separated tag input into cleaned ltree-safe strings."""
+    tags = []
+    for token in raw.replace(",", " ").split():
+        token = token.strip().lower().replace(" ", "_")
+        if token:
+            tags.append(token)
+    return tags
+
+
+@login_required
+def list_projects(request):
+    _require_tenant(request)
+    projects = Project.objects.filter(tenant=request.tenant).prefetch_related("tags")
+    return render(request, "budget/projects.html", {
+        "title": _("Projects"),
+        "projects": projects,
+    })
+
+
+@login_required
+def edit_project(request, project_id=None):
+    _require_tenant(request)
+    project = None
+    if project_id:
+        project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+
+    error = None
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        tags_raw = request.POST.get("tags", "")
+        if not name:
+            error = _("Name is required.")
+        else:
+            if project is None:
+                project = Project.objects.create(
+                    tenant=request.tenant, name=name, description=description
+                )
+            else:
+                project.name = name
+                project.description = description
+                project.save()
+
+            project.tags.all().delete()
+            for tag in _tags_from_input(tags_raw):
+                ProjectTag.objects.create(project=project, tag=tag)
+
+            return redirect("list_projects")
+
+    tags_value = ", ".join(t.tag.replace(".", "/") for t in project.tags.all()) if project else ""
+    return render(request, "budget/project_form.html", {
+        "title": _("Edit Project") if project else _("New Project"),
+        "project": project,
+        "tags_value": tags_value,
+        "error": error,
+    })
+
+
+@login_required
+def delete_project(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    if request.method == "POST":
+        project.delete()
+    return redirect("list_projects")

@@ -29,9 +29,9 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ("name", "year", "tenant")
-    list_filter = ("tenant", "year")
-    search_fields = ("name",)
+    list_display = ("name", "tenant")
+    list_filter = ("tenant",)
+    search_fields = ("name", "description")
 
 
 @admin.register(ProjectTag)

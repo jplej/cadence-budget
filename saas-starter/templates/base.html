@@ -68,7 +68,7 @@
 
           <li class="menu-title text-xs uppercase tracking-wider opacity-50 px-3 mb-1">{% trans "Projects" %}</li>
           <li>
-            <a href="#" class="{% block nav_projects %}{% endblock %}">
+            <a href="{% url 'list_projects' %}" class="{% block nav_projects %}{% endblock %}">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/>
               </svg>

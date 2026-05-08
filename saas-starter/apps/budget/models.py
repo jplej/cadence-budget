@@ -37,13 +37,13 @@ class Category(models.Model):
 class Project(models.Model):
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="projects")
     name = models.CharField(max_length=200)
-    year = models.IntegerField()
+    description = models.TextField(blank=True, default="")
 
     class Meta:
-        ordering = ["-year", "name"]
+        ordering = ["name"]
 
     def __str__(self):
-        return f"{self.name} ({self.year})"
+        return self.name
 
 
 class ProjectTag(models.Model):

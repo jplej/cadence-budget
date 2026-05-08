@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block nav_projects %}active{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-2xl font-bold">{% trans "Projects" %}</h1>
+  <a href="{% url 'new_project' %}" class="btn btn-primary btn-sm">{% trans "New Project" %}</a>
+</div>
+
+<div class="card bg-base-100 shadow">
+  <div class="card-body p-0">
+    {% if projects %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th>{% trans "Name" %}</th>
+              <th>{% trans "Tags" %}</th>
+              <th class="w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for project in projects %}
+            <tr>
+              <td>
+                <div class="font-medium">{{ project.name }}</div>
+                {% if project.description %}
+                  <div class="text-xs text-base-content/50 mt-0.5">{{ project.description|truncatechars:80 }}</div>
+                {% endif %}
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  {% for tag in project.tags.all %}
+                    <span class="badge badge-outline badge-sm font-mono">{{ tag }}</span>
+                  {% empty %}
+                    <span class="text-base-content/30 text-sm">—</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td class="text-right">
+                <div class="flex gap-2 justify-end">
+                  <a href="{% url 'edit_project' project.id %}" class="btn btn-xs btn-outline">{% trans "Edit" %}</a>
+                  <form method="post" action="{% url 'delete_project' project.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-error btn-outline"
+                      onclick="return confirm('{% trans "Delete this project?" %}')">{% trans "Delete" %}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="px-6 py-12 text-center text-base-content/40">
+        {% trans "No projects yet." %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
