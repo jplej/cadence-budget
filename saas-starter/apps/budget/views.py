@@ -6,9 +6,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from datetime import date as date_type
 from decimal import Decimal, InvalidOperation
 
-from .models import Category, Partner, Project, ProjectParticipation, ProjectTag
+from .models import BudgetLine, Category, Partner, Project, ProjectParticipation, ProjectTag
 
 
 def _require_tenant(request):
@@ -229,10 +230,38 @@ def delete_project(request, project_id):
 def project_detail(request, project_id):
     _require_tenant(request)
     project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    budget_lines = project.budget_lines.select_related(
+        "category", "category__parent"
+    ).order_by("category__name", "id")
+    categories = Category.objects.filter(tenant=request.tenant).select_related("parent")
+
+    edit_line_id = None
+    edit_line_error = None
+    try:
+        edit_line_id = int(request.GET.get("edit_line", ""))
+    except (ValueError, TypeError):
+        pass
+    edit_line_error = request.GET.get("error_line", "")
+    add_line_error = request.GET.get("add_line_error", "")
+
+    return render(request, "budget/project_detail.html", {
+        "title": project.name,
+        "project": project,
+        "budget_lines": budget_lines,
+        "categories": categories,
+        "edit_line_id": edit_line_id,
+        "edit_line_error": edit_line_error,
+        "add_line_error": add_line_error,
+    })
+
+
+@login_required
+def project_settings(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
     participations = project.participations.select_related("partner").order_by("partner__name")
     total_share = sum((p.share_percent for p in participations), Decimal("0"))
     remaining = Decimal("100") - total_share
-
     already_in = participations.values_list("partner_id", flat=True)
     available_partners = Partner.objects.filter(tenant=request.tenant).exclude(id__in=already_in)
 
@@ -245,7 +274,7 @@ def project_detail(request, project_id):
         pass
     edit_error = request.GET.get("error_edit", "")
 
-    return render(request, "budget/project_detail.html", {
+    return render(request, "budget/project_settings.html", {
         "title": project.name,
         "project": project,
         "participations": participations,
@@ -285,15 +314,15 @@ def add_participation(request, project_id):
         share, error = _validate_share(request.POST.get("share_percent", ""), existing_total)
         if error:
             params = urlencode({"add_error": error})
-            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
         try:
             partner = Partner.objects.get(id=int(partner_id), tenant=request.tenant)
         except (Partner.DoesNotExist, ValueError):
             params = urlencode({"add_error": str(_("Invalid partner."))})
-            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
         ProjectParticipation.objects.create(project=project, partner=partner, share_percent=share)
 
-    return redirect("project_detail", project_id=project_id)
+    return redirect("project_settings", project_id=project_id)
 
 
 @login_required
@@ -309,11 +338,11 @@ def edit_participation(request, project_id, part_id):
         share, error = _validate_share(request.POST.get("share_percent", ""), other_total)
         if error:
             params = urlencode({"edit": part_id, "error_edit": error})
-            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
         participation.share_percent = share
         participation.save()
 
-    return redirect("project_detail", project_id=project_id)
+    return redirect("project_settings", project_id=project_id)
 
 
 @login_required
@@ -323,4 +352,85 @@ def delete_participation(request, project_id, part_id):
     participation = get_object_or_404(ProjectParticipation, id=part_id, project=project)
     if request.method == "POST":
         participation.delete()
+    return redirect("project_settings", project_id=project_id)
+
+
+def _parse_decimal(val):
+    val = (val or "").strip()
+    if not val:
+        return None
+    try:
+        return Decimal(val)
+    except InvalidOperation:
+        return None
+
+
+def _parse_date(val):
+    val = (val or "").strip()
+    if not val:
+        return None
+    try:
+        return date_type.fromisoformat(val)
+    except ValueError:
+        return None
+
+
+def _budget_line_fields_from_post(post, tenant):
+    category_id = (post.get("category_id", "") or "").strip()
+    category = None
+    if category_id:
+        try:
+            category = Category.objects.get(id=int(category_id), tenant=tenant)
+        except (Category.DoesNotExist, ValueError):
+            pass
+    return {
+        "category": category,
+        "forecast_amount": _parse_decimal(post.get("forecast_amount")),
+        "forecast_date": _parse_date(post.get("forecast_date")),
+        "realized_amount": _parse_decimal(post.get("realized_amount")),
+        "realized_date": _parse_date(post.get("realized_date")),
+        "comment": post.get("comment", "").strip(),
+    }
+
+
+@login_required
+def add_budget_line(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+
+    if request.method == "POST":
+        fields = _budget_line_fields_from_post(request.POST, request.tenant)
+        if not fields["category"]:
+            params = urlencode({"add_line_error": str(_("Category is required."))})
+            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+        BudgetLine.objects.create(project=project, **fields)
+
+    return redirect("project_detail", project_id=project_id)
+
+
+@login_required
+def edit_budget_line(request, project_id, line_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    line = get_object_or_404(BudgetLine, id=line_id, project=project)
+
+    if request.method == "POST":
+        fields = _budget_line_fields_from_post(request.POST, request.tenant)
+        if not fields["category"]:
+            params = urlencode({"edit_line": line_id, "error_line": str(_("Category is required."))})
+            return redirect(f"{reverse('project_detail', args=[project_id])}?{params}")
+        for attr, value in fields.items():
+            setattr(line, attr, value)
+        line.save()
+
+    return redirect("project_detail", project_id=project_id)
+
+
+@login_required
+def delete_budget_line(request, project_id, line_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    line = get_object_or_404(BudgetLine, id=line_id, project=project)
+    if request.method == "POST":
+        line.delete()
     return redirect("project_detail", project_id=project_id)

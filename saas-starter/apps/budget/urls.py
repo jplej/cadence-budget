@@ -14,7 +14,11 @@ urlpatterns = [
     path("projects/<int:project_id>/", views.project_detail, name="project_detail"),
     path("projects/<int:project_id>/edit/", views.edit_project, name="edit_project"),
     path("projects/<int:project_id>/delete/", views.delete_project, name="delete_project"),
+    path("projects/<int:project_id>/settings/", views.project_settings, name="project_settings"),
     path("projects/<int:project_id>/participations/add/", views.add_participation, name="add_participation"),
     path("projects/<int:project_id>/participations/<int:part_id>/edit/", views.edit_participation, name="edit_participation"),
     path("projects/<int:project_id>/participations/<int:part_id>/delete/", views.delete_participation, name="delete_participation"),
+    path("projects/<int:project_id>/lines/add/", views.add_budget_line, name="add_budget_line"),
+    path("projects/<int:project_id>/lines/<int:line_id>/edit/", views.edit_budget_line, name="edit_budget_line"),
+    path("projects/<int:project_id>/lines/<int:line_id>/delete/", views.delete_budget_line, name="delete_budget_line"),
 ]

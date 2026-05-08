@@ -3,188 +3,216 @@
 {% block nav_projects %}active{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl">
-
-  <!-- Header -->
-  <div class="flex items-start justify-between mb-6">
-    <div class="flex items-center gap-3">
-      <a href="{% url 'list_projects' %}" class="btn btn-ghost btn-sm btn-square">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </a>
-      <div>
-        <h1 class="text-2xl font-bold">{{ project.name }}</h1>
-        {% if project.tags.all %}
-          <div class="flex flex-wrap gap-1 mt-1">
-            {% for tag in project.tags.all %}
-              <span class="badge badge-outline badge-sm font-mono">{{ tag }}</span>
-            {% endfor %}
-          </div>
-        {% endif %}
-      </div>
-    </div>
-    <div class="flex gap-2">
-      <a href="{% url 'edit_project' project.id %}" class="btn btn-sm btn-outline">{% trans "Edit" %}</a>
-      <form method="post" action="{% url 'delete_project' project.id %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-sm btn-error btn-outline"
-          onclick="return confirm('{% trans "Delete this project?" %}')">{% trans "Delete" %}</button>
-      </form>
+<!-- Header -->
+<div class="flex items-start justify-between mb-6">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'list_projects' %}" class="btn btn-ghost btn-sm btn-square">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold">{{ project.name }}</h1>
+      {% if project.tags.all %}
+        <div class="flex flex-wrap gap-1 mt-1">
+          {% for tag in project.tags.all %}
+            <span class="badge badge-outline badge-sm font-mono">{{ tag }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
     </div>
   </div>
+  <div class="flex gap-2">
+    <label for="modal-add-line" class="btn btn-primary btn-sm">{% trans "Add Line" %}</label>
+    <a href="{% url 'project_settings' project.id %}" class="btn btn-sm btn-outline">{% trans "Settings" %}</a>
+  </div>
+</div>
 
-  {% if project.description %}
-    <p class="text-base-content/60 mb-6">{{ project.description }}</p>
-  {% endif %}
+{% if project.description %}
+  <p class="text-base-content/50 text-sm mb-4">{{ project.description }}</p>
+{% endif %}
 
-  <!-- Participations -->
-  <div class="card bg-base-100 shadow mb-6">
-    <div class="card-body">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="card-title text-base">{% trans "Participations" %}</h2>
-        {% if available_partners %}
-          <label for="modal-add-participation" class="btn btn-sm btn-primary">{% trans "Add" %}</label>
-        {% endif %}
-      </div>
-
-      {% if participations %}
+<!-- Budget lines table -->
+<div class="card bg-base-100 shadow">
+  <div class="card-body p-0">
+    {% if budget_lines %}
+      <div class="overflow-x-auto">
         <table class="table w-full">
           <thead>
             <tr>
-              <th>{% trans "Partner" %}</th>
-              <th class="text-right">{% trans "Share %" %}</th>
+              <th>{% trans "Category" %}</th>
+              <th class="text-right">{% trans "Forecast" %}</th>
+              <th class="text-right w-28">{% trans "Forecast date" %}</th>
+              <th class="text-right">{% trans "Realized" %}</th>
+              <th class="text-right w-28">{% trans "Realized date" %}</th>
+              <th>{% trans "Comment" %}</th>
               <th class="w-20"></th>
             </tr>
           </thead>
           <tbody>
-            {% for p in participations %}
+            {% for line in budget_lines %}
             <tr>
               <td>
-                {{ p.partner.name }}
-                {% if p.partner.is_internal %}
-                  <span class="badge badge-info badge-xs ml-1">{% trans "us" %}</span>
+                <div class="font-medium text-sm">{{ line.category.name }}</div>
+                {% if line.category.parent %}
+                  <div class="text-xs text-base-content/40">{{ line.category.parent.name }}</div>
                 {% endif %}
               </td>
-              <td class="text-right font-mono">{{ p.share_percent }}%</td>
+              <td class="text-right font-mono text-sm">
+                {{ line.forecast_amount|default:"—"|floatformat:2 }}
+              </td>
+              <td class="text-right text-xs text-base-content/50">
+                {{ line.forecast_date|default:"—" }}
+              </td>
+              <td class="text-right font-mono text-sm">
+                {{ line.realized_amount|default:"—"|floatformat:2 }}
+              </td>
+              <td class="text-right text-xs text-base-content/50">
+                {{ line.realized_date|default:"—" }}
+              </td>
+              <td class="text-sm text-base-content/60 max-w-xs">{{ line.comment|truncatechars:50 }}</td>
               <td class="text-right">
                 <div class="flex gap-1 justify-end">
-                  <label for="modal-edit-part-{{ p.id }}" class="btn btn-xs btn-outline">{% trans "Edit" %}</label>
-                  <form method="post" action="{% url 'delete_participation' project.id p.id %}">
+                  <label for="modal-edit-line-{{ line.id }}" class="btn btn-xs btn-ghost">{% trans "Edit" %}</label>
+                  <form method="post" action="{% url 'delete_budget_line' project.id line.id %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-xs btn-error btn-outline"
-                      onclick="return confirm('{% trans "Remove this participant?" %}')">{% trans "Remove" %}</button>
+                    <button type="submit" class="btn btn-xs btn-ghost text-error"
+                      onclick="return confirm('{% trans "Delete this line?" %}')">✕</button>
                   </form>
                 </div>
               </td>
             </tr>
             {% endfor %}
           </tbody>
-          <tfoot>
-            <tr>
-              <td class="text-sm text-base-content/50">{% trans "Total" %}</td>
-              <td class="text-right font-mono font-bold
-                {% if total_share == 100 %}text-success{% elif total_share > 100 %}text-error{% else %}text-warning{% endif %}">
-                {{ total_share }}%
-              </td>
-              <td></td>
-            </tr>
-          </tfoot>
         </table>
-
-        {% if total_share < 100 %}
-          <div class="text-xs text-warning mt-2">
-            {% blocktrans with r=remaining %}{{ r }}% still unallocated{% endblocktrans %}
-          </div>
-        {% endif %}
-
-      {% else %}
-        <p class="text-base-content/40 text-sm">{% trans "No participants yet." %}</p>
-      {% endif %}
-    </div>
+      </div>
+    {% else %}
+      <div class="px-6 py-16 text-center text-base-content/30">
+        {% trans "No budget lines yet. Add your first line." %}
+      </div>
+    {% endif %}
   </div>
-
-  <!-- Waterfall placeholder -->
-  <div class="card bg-base-100 shadow opacity-50">
-    <div class="card-body">
-      <h2 class="card-title text-base">{% trans "Waterfall" %}</h2>
-      <p class="text-sm text-base-content/40">{% trans "Coming soon." %}</p>
-    </div>
-  </div>
-
 </div>
 
-<!-- Add participation modal -->
-<input type="checkbox" id="modal-add-participation" class="modal-toggle" {% if add_error %}checked{% endif %} />
+<!-- Add budget line modal -->
+<input type="checkbox" id="modal-add-line" class="modal-toggle" {% if add_line_error %}checked{% endif %} />
 <div class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg mb-4">{% trans "Add Participant" %}</h3>
-    <form method="post" action="{% url 'add_participation' project.id %}">
+  <div class="modal-box w-11/12 max-w-lg">
+    <h3 class="font-bold text-lg mb-4">{% trans "Add Budget Line" %}</h3>
+    <form method="post" action="{% url 'add_budget_line' project.id %}">
       {% csrf_token %}
-      {% if add_error %}
-        <div role="alert" class="alert alert-error mb-4"><span>{{ add_error }}</span></div>
+      {% if add_line_error %}
+        <div role="alert" class="alert alert-error mb-4"><span>{{ add_line_error }}</span></div>
       {% endif %}
 
       <div class="form-control mb-3">
-        <label class="label" for="add-partner"><span class="label-text font-medium">{% trans "Partner" %} *</span></label>
-        <select id="add-partner" name="partner_id" class="select select-bordered" required>
+        <label class="label" for="add-cat"><span class="label-text font-medium">{% trans "Category" %} *</span></label>
+        <select id="add-cat" name="category_id" class="select select-bordered select-sm" required>
           <option value="">—</option>
-          {% for partner in available_partners %}
-            <option value="{{ partner.id }}">
-              {{ partner.name }}{% if partner.is_internal %} ({% trans "us" %}){% endif %}
+          {% for cat in categories %}
+            <option value="{{ cat.id }}">
+              {% if cat.parent %}{{ cat.parent.name }} / {% endif %}{% if cat.code %}{{ cat.code }} – {% endif %}{{ cat.name }}
             </option>
           {% endfor %}
         </select>
       </div>
 
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="form-control">
+          <label class="label" for="add-fa"><span class="label-text">{% trans "Forecast amount" %}</span></label>
+          <input id="add-fa" name="forecast_amount" type="number" step="0.01" class="input input-bordered input-sm" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="add-fd"><span class="label-text">{% trans "Forecast date" %}</span></label>
+          <input id="add-fd" name="forecast_date" type="date" class="input input-bordered input-sm" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="form-control">
+          <label class="label" for="add-ra"><span class="label-text">{% trans "Realized amount" %}</span></label>
+          <input id="add-ra" name="realized_amount" type="number" step="0.01" class="input input-bordered input-sm" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="add-rd"><span class="label-text">{% trans "Realized date" %}</span></label>
+          <input id="add-rd" name="realized_date" type="date" class="input input-bordered input-sm" />
+        </div>
+      </div>
       <div class="form-control mb-4">
-        <label class="label" for="add-share">
-          <span class="label-text font-medium">{% trans "Share %" %} *</span>
-          <span class="label-text-alt text-base-content/50">
-            {% blocktrans with r=remaining %}{{ r }}% available{% endblocktrans %}
-          </span>
-        </label>
-        <input id="add-share" name="share_percent" type="number" min="0.01" max="{{ remaining }}"
-          step="0.01" class="input input-bordered" required />
+        <label class="label" for="add-comment"><span class="label-text">{% trans "Comment" %}</span></label>
+        <input id="add-comment" name="comment" type="text" class="input input-bordered input-sm" />
       </div>
 
       <div class="modal-action">
-        <label for="modal-add-participation" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <label for="modal-add-line" class="btn btn-ghost">{% trans "Cancel" %}</label>
         <button type="submit" class="btn btn-primary">{% trans "Add" %}</button>
       </div>
     </form>
   </div>
-  <label class="modal-backdrop" for="modal-add-participation"></label>
+  <label class="modal-backdrop" for="modal-add-line"></label>
 </div>
 
-<!-- Edit participation modals -->
-{% for p in participations %}
-<input type="checkbox" id="modal-edit-part-{{ p.id }}" class="modal-toggle"
-  {% if edit_part_id == p.id %}checked{% endif %} />
+<!-- Edit budget line modals -->
+{% for line in budget_lines %}
+<input type="checkbox" id="modal-edit-line-{{ line.id }}" class="modal-toggle"
+  {% if edit_line_id == line.id %}checked{% endif %} />
 <div class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg mb-4">{{ p.partner.name }}</h3>
-    <form method="post" action="{% url 'edit_participation' project.id p.id %}">
+  <div class="modal-box w-11/12 max-w-lg">
+    <h3 class="font-bold text-lg mb-4">{% trans "Edit Budget Line" %}</h3>
+    <form method="post" action="{% url 'edit_budget_line' project.id line.id %}">
       {% csrf_token %}
-      {% if edit_part_id == p.id and edit_error %}
-        <div role="alert" class="alert alert-error mb-4"><span>{{ edit_error }}</span></div>
+      {% if edit_line_id == line.id and edit_line_error %}
+        <div role="alert" class="alert alert-error mb-4"><span>{{ edit_line_error }}</span></div>
       {% endif %}
 
+      <div class="form-control mb-3">
+        <label class="label" for="edit-cat-{{ line.id }}"><span class="label-text font-medium">{% trans "Category" %} *</span></label>
+        <select id="edit-cat-{{ line.id }}" name="category_id" class="select select-bordered select-sm" required>
+          <option value="">—</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if line.category_id == cat.id %}selected{% endif %}>
+              {% if cat.parent %}{{ cat.parent.name }} / {% endif %}{% if cat.code %}{{ cat.code }} – {% endif %}{{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="form-control">
+          <label class="label" for="edit-fa-{{ line.id }}"><span class="label-text">{% trans "Forecast amount" %}</span></label>
+          <input id="edit-fa-{{ line.id }}" name="forecast_amount" type="number" step="0.01"
+            class="input input-bordered input-sm" value="{{ line.forecast_amount|default:'' }}" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="edit-fd-{{ line.id }}"><span class="label-text">{% trans "Forecast date" %}</span></label>
+          <input id="edit-fd-{{ line.id }}" name="forecast_date" type="date"
+            class="input input-bordered input-sm" value="{{ line.forecast_date|default:'' }}" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="form-control">
+          <label class="label" for="edit-ra-{{ line.id }}"><span class="label-text">{% trans "Realized amount" %}</span></label>
+          <input id="edit-ra-{{ line.id }}" name="realized_amount" type="number" step="0.01"
+            class="input input-bordered input-sm" value="{{ line.realized_amount|default:'' }}" />
+        </div>
+        <div class="form-control">
+          <label class="label" for="edit-rd-{{ line.id }}"><span class="label-text">{% trans "Realized date" %}</span></label>
+          <input id="edit-rd-{{ line.id }}" name="realized_date" type="date"
+            class="input input-bordered input-sm" value="{{ line.realized_date|default:'' }}" />
+        </div>
+      </div>
       <div class="form-control mb-4">
-        <label class="label" for="edit-share-{{ p.id }}">
-          <span class="label-text font-medium">{% trans "Share %" %} *</span>
-        </label>
-        <input id="edit-share-{{ p.id }}" name="share_percent" type="number" min="0.01" max="100"
-          step="0.01" class="input input-bordered" value="{{ p.share_percent }}" required />
+        <label class="label" for="edit-comment-{{ line.id }}"><span class="label-text">{% trans "Comment" %}</span></label>
+        <input id="edit-comment-{{ line.id }}" name="comment" type="text"
+          class="input input-bordered input-sm" value="{{ line.comment }}" />
       </div>
 
       <div class="modal-action">
-        <label for="modal-edit-part-{{ p.id }}" class="btn btn-ghost">{% trans "Cancel" %}</label>
+        <label for="modal-edit-line-{{ line.id }}" class="btn btn-ghost">{% trans "Cancel" %}</label>
         <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
       </div>
     </form>
   </div>
-  <label class="modal-backdrop" for="modal-edit-part-{{ p.id }}"></label>
+  <label class="modal-backdrop" for="modal-edit-line-{{ line.id }}"></label>
 </div>
 {% endfor %}
 
