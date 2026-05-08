@@ -9,7 +9,8 @@ from django.utils.translation import gettext_lazy as _
 from datetime import date as date_type
 from decimal import Decimal, InvalidOperation
 
-from .models import BudgetLine, Category, Partner, Project, ProjectParticipation, ProjectTag
+from .models import BudgetLine, Category, Partner, Project, ProjectParticipation, ProjectTag, TrancheClaim, WaterfallTranche
+from .waterfall import calculate_waterfall
 
 
 def _require_tenant(request):
@@ -274,6 +275,32 @@ def project_settings(request, project_id):
         pass
     edit_error = request.GET.get("error_edit", "")
 
+    tranches = project.tranches.prefetch_related("claims__partner").order_by("priority")
+    all_partners = Partner.objects.filter(tenant=request.tenant)
+    next_priority = (max((t.priority for t in tranches), default=0) + 1) if tranches else 1
+
+    add_tranche_error = request.GET.get("add_tranche_error", "")
+    edit_tranche_id = None
+    try:
+        edit_tranche_id = int(request.GET.get("edit_tranche", ""))
+    except (ValueError, TypeError):
+        pass
+
+    add_claim_tranche_id = None
+    try:
+        add_claim_tranche_id = int(request.GET.get("add_claim_tranche", ""))
+    except (ValueError, TypeError):
+        pass
+    add_claim_error = request.GET.get("add_claim_error", "")
+
+    edit_claim_id = None
+    edit_claim_error = None
+    try:
+        edit_claim_id = int(request.GET.get("edit_claim", ""))
+    except (ValueError, TypeError):
+        pass
+    edit_claim_error = request.GET.get("error_claim", "")
+
     return render(request, "budget/project_settings.html", {
         "title": project.name,
         "project": project,
@@ -284,6 +311,17 @@ def project_settings(request, project_id):
         "add_error": add_error,
         "edit_part_id": edit_part_id,
         "edit_error": edit_error,
+        "tranches": tranches,
+        "all_partners": all_partners,
+        "next_priority": next_priority,
+        "add_tranche_error": add_tranche_error,
+        "edit_tranche_id": edit_tranche_id,
+        "add_claim_tranche_id": add_claim_tranche_id,
+        "add_claim_error": add_claim_error,
+        "edit_claim_id": edit_claim_id,
+        "edit_claim_error": edit_claim_error,
+        "rule_types": WaterfallTranche.RuleType.choices,
+        "recoup_targets": TrancheClaim.RecoupTarget.choices,
     })
 
 
@@ -434,3 +472,130 @@ def delete_budget_line(request, project_id, line_id):
     if request.method == "POST":
         line.delete()
     return redirect("project_detail", project_id=project_id)
+
+
+@login_required
+def waterfall_results(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    results = calculate_waterfall(project)
+    return render(request, "budget/waterfall_results.html", {
+        "title": project.name,
+        "project": project,
+        **results,
+    })
+
+
+@login_required
+def add_tranche(request, project_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    if request.method == "POST":
+        try:
+            priority = int(request.POST.get("priority", ""))
+        except (ValueError, TypeError):
+            params = urlencode({"add_tranche_error": str(_("Priority must be a number."))})
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
+        rule_type = request.POST.get("rule_type", "")
+        description = request.POST.get("description", "").strip()
+        if WaterfallTranche.objects.filter(project=project, priority=priority).exists():
+            params = urlencode({"add_tranche_error": str(_("Priority %(p)s already exists.") % {"p": priority})})
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
+        WaterfallTranche.objects.create(
+            project=project, priority=priority, rule_type=rule_type, description=description
+        )
+    return redirect("project_settings", project_id=project_id)
+
+
+@login_required
+def edit_tranche(request, project_id, tranche_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    tranche = get_object_or_404(WaterfallTranche, id=tranche_id, project=project)
+    if request.method == "POST":
+        try:
+            priority = int(request.POST.get("priority", ""))
+        except (ValueError, TypeError):
+            params = urlencode({"edit_tranche": tranche_id, "add_tranche_error": str(_("Priority must be a number."))})
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
+        if WaterfallTranche.objects.filter(project=project, priority=priority).exclude(id=tranche_id).exists():
+            params = urlencode({"edit_tranche": tranche_id, "add_tranche_error": str(_("Priority %(p)s already exists.") % {"p": priority})})
+            return redirect(f"{reverse('project_settings', args=[project_id])}?{params}")
+        tranche.priority = priority
+        tranche.rule_type = request.POST.get("rule_type", tranche.rule_type)
+        tranche.description = request.POST.get("description", "").strip()
+        tranche.save()
+    return redirect("project_settings", project_id=project_id)
+
+
+@login_required
+def delete_tranche(request, project_id, tranche_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    tranche = get_object_or_404(WaterfallTranche, id=tranche_id, project=project)
+    if request.method == "POST":
+        tranche.delete()
+    return redirect("project_settings", project_id=project_id)
+
+
+@login_required
+def add_claim(request, project_id, tranche_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    tranche = get_object_or_404(WaterfallTranche, id=tranche_id, project=project)
+    settings_url = reverse("project_settings", args=[project_id])
+    if request.method == "POST":
+        share, error = _validate_share(
+            request.POST.get("share_percent", ""),
+            sum((c.share_percent for c in tranche.claims.all()), Decimal("0")),
+        )
+        if error:
+            params = urlencode({"add_claim_tranche": tranche_id, "add_claim_error": error})
+            return redirect(f"{settings_url}?{params}")
+        try:
+            partner = Partner.objects.get(
+                id=int(request.POST.get("partner_id", "")), tenant=request.tenant
+            )
+        except (Partner.DoesNotExist, ValueError):
+            params = urlencode({"add_claim_tranche": tranche_id, "add_claim_error": str(_("Invalid partner."))})
+            return redirect(f"{settings_url}?{params}")
+        recoup_target = request.POST.get("recoup_target", "") or None
+        recoup_amount = _parse_decimal(request.POST.get("recoup_amount", ""))
+        TrancheClaim.objects.create(
+            tranche=tranche, partner=partner, share_percent=share,
+            recoup_target=recoup_target, recoup_amount=recoup_amount,
+        )
+    return redirect("project_settings", project_id=project_id)
+
+
+@login_required
+def edit_claim(request, project_id, tranche_id, claim_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    tranche = get_object_or_404(WaterfallTranche, id=tranche_id, project=project)
+    claim = get_object_or_404(TrancheClaim, id=claim_id, tranche=tranche)
+    settings_url = reverse("project_settings", args=[project_id])
+    if request.method == "POST":
+        other_total = sum(
+            (c.share_percent for c in tranche.claims.exclude(id=claim_id)), Decimal("0")
+        )
+        share, error = _validate_share(request.POST.get("share_percent", ""), other_total)
+        if error:
+            params = urlencode({"edit_claim": claim_id, "error_claim": error})
+            return redirect(f"{settings_url}?{params}")
+        claim.share_percent = share
+        claim.recoup_target = request.POST.get("recoup_target", "") or None
+        claim.recoup_amount = _parse_decimal(request.POST.get("recoup_amount", ""))
+        claim.save()
+    return redirect("project_settings", project_id=project_id)
+
+
+@login_required
+def delete_claim(request, project_id, tranche_id, claim_id):
+    _require_tenant(request)
+    project = get_object_or_404(Project, id=project_id, tenant=request.tenant)
+    tranche = get_object_or_404(WaterfallTranche, id=tranche_id, project=project)
+    claim = get_object_or_404(TrancheClaim, id=claim_id, tranche=tranche)
+    if request.method == "POST":
+        claim.delete()
+    return redirect("project_settings", project_id=project_id)
