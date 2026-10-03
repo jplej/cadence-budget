@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_macros.html" import budget_table, legend, empty %}
+{% block content %}
+{% if not data %}{{ empty() }}{% else %}
+{% set c = data.card %}
+<h1>{{ display_name(artist) }}</h1>
+<p class="sub">{{ data.projects|join(" · ") or "Aucun projet" }}</p>
+<h2>{{ cutoff[:4] }}</h2>
+<div class="kpis">
+  <div class="box main {% if c and c.net < 0 %}loss{% endif %}"><div class="lbl">Net label</div><div class="figure">{{ amount(c.net) if c else "0,00" }} $</div></div>
+  <div class="box"><div class="lbl">Revenus / dépenses</div><div class="figure">{{ amount(c.revenus) if c else "0,00" }}</div><div class="mono neg">{{ amount(c.depenses) if c and c.depenses else "0,00" }}</div></div>
+  <div class="box"><div class="lbl">Part artiste</div><div class="figure">{% if data.has_artist_share %}voir données{% else %}—{% endif %}</div>{% if not data.has_artist_share %}<div class="lbl">non renseignée dans les fichiers</div>{% endif %}</div>
+</div>
+<div class="toolbar" style="margin-top:32px"><h2 style="margin:0">Budget par catégorie</h2>{{ legend() }}</div>
+{{ budget_table(data, cutoff) }}
+{% endif %}
+{% endblock %}

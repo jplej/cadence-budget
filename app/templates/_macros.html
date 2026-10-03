@@ -1,0 +1,43 @@
+{% macro df_table(df, cutoff, label_cols=1) %}
+<div class="table-wrap">
+<table>
+  <thead><tr>{% for c in df.columns %}<th>{{ month_label(c|string, cutoff) }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in df.itertuples(index=False) %}
+    <tr class="{% if row[0] in ('TOTAL', 'CUMULATIF') %}total{% endif %}">
+      {% for v in row %}
+        {% if loop.index <= label_cols %}<th>{{ display_name(v) if v not in ('TOTAL', 'CUMULATIF') and v is string and v.endswith('_BUDGETS') else cell(v) }}</th>
+        {% else %}<td class="num {% if neg(v) %}neg{% endif %}">{{ cell(v) }}</td>{% endif %}
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}
+
+{% macro budget_table(data, cutoff, show_sections=true) %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Catégorie</th>{% for m in data.months %}<th>{{ month_label(m, cutoff) }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for title, rows in data.sections %}
+    {% if show_sections %}<tr class="section"><th colspan="{{ data.months|length + 1 }}">{{ title }}</th></tr>{% endif %}
+    {% for r in rows.to_dict("records") %}
+      <tr>
+        <th>{{ r.categorie_budgetaire }}</th>
+        {% for m in data.months %}
+          {% set st = data.status.get((r.artiste, r.type_projet, r.categorie_budgetaire, m)) %}
+          <td class="num {% if neg(r[m]) %}neg{% endif %} {% if st and cell(r[m]) %}s-{{ st }}{% endif %}">{{ cell(r[m]) }}</td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endmacro %}
+
+{% macro legend() %}<span class="legend"><span class="chip s-paid">Payé</span><span class="chip s-partial">Partiel</span><span class="chip s-forecast">Prévision</span></span>{% endmacro %}
+
+{% macro empty() %}<p class="empty">Pas encore de données — lancez une synchronisation (⟳).</p>{% endmacro %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import budget_table, legend, empty %}
+{% block content %}
+{% if not data %}{{ empty() }}{% else %}
+<h1>Projets</h1>
+<div class="toolbar">
+  <select name="artist" form="filters" hx-get="/projects" hx-include="#filters" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">
+    <option value="">Tous les artistes</option>
+    {% for a in data.artists %}<option value="{{ a }}" {% if a == artist %}selected{% endif %}>{{ display_name(a) }}</option>{% endfor %}
+  </select>
+  {{ legend() }}
+</div>
+{{ budget_table(data, cutoff) }}
+{% endif %}
+{% endblock %}

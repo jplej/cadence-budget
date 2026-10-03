@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty %}
+{% block content %}
+{% if not data %}{{ empty() }}{% else %}
+<h1>Frais fixes</h1>
+<p class="sub">Dépenses de fonctionnement du label, par catégorie et par mois.</p>
+<div class="table-wrap" style="margin-top:24px">
+<table>
+  <thead><tr><th>Catégorie</th>{% for m in data.months %}<th>{{ month_label(m, cutoff) }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in data.pivot.to_dict("records") %}
+    <tr>
+      <th>{{ r.categorie_budgetaire }}</th>
+      {% for m in data.months %}<td class="num {% if neg(r[m]) %}neg{% endif %}">{{ cell(r[m]) }}</td>{% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

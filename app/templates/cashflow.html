@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% from "_macros.html" import df_table, empty %}
+{% block content %}
+{% if not data %}{{ empty() }}{% else %}
+<h1>Trésorerie</h1>
+<p class="sub">Flux net par mois, réel jusqu'au {{ cutoff }} puis prévision.</p>
+<h2>Par artiste</h2>
+{{ df_table(data.artist_cashflow.reset_index(), cutoff) }}
+<h2>Par type de projet</h2>
+{{ df_table(data.project_cashflow.reset_index(), cutoff) }}
+{% endif %}
+{% endblock %}

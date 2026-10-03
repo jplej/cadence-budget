@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadence · Connexion</title>
+  <script>try { var t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main style="max-width:420px;padding-top:12vh">
+  <form method="post" action="/login" class="box login">
+    <div class="brand"><img src="/static/ddv-logo.png" alt="Dure Vie"><b>CADENCE</b></div>
+    <label class="lbl" for="password">Mot de passe du label</label>
+    <input id="password" name="password" type="password" autofocus required>
+    {% if error %}<p class="neg">Mot de passe incorrect.</p>{% endif %}
+    <button type="submit">Entrer →</button>
+  </form>
+</main>
+</body>
+</html>

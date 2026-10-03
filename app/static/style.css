@@ -1,0 +1,112 @@
+/* Cadence — brutalist x Disques Dure Vie. */
+:root {
+  --bg: #f4f4f0; --surface: #fff; --ink: #000; --line: #000; --shadow: #000; --muted: #555;
+  --green: #98b567; --green-soft: #d9e8bf; --lav: #c9bbf6; --red: #c8381f; --pos: #3f5f14;
+  --hatch: rgba(0, 0, 0, .12);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161616; --surface: #232323; --ink: #f2f2f2; --line: #f2f2f2; --shadow: #98b567; --muted: #a8a8a8;
+    --green-soft: #3a4a22; --lav: #4b3f78; --red: #ff7a66; --pos: #b9d98a; --hatch: rgba(255, 255, 255, .12);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161616; --surface: #232323; --ink: #f2f2f2; --line: #f2f2f2; --shadow: #98b567; --muted: #a8a8a8;
+  --green-soft: #3a4a22; --lav: #4b3f78; --red: #ff7a66; --pos: #b9d98a; --hatch: rgba(255, 255, 255, .12);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 Archivo, system-ui, sans-serif; }
+a { color: inherit; }
+.mono, td.num, .figure { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* Navbar */
+.topbar { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 10px 16px; background: var(--surface); border-bottom: 3px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: 8px; }
+.brand img { height: 46px; mix-blend-mode: multiply; }
+.brand b { font-weight: 900; letter-spacing: .06em; font-size: 15px; }
+:root[data-theme="dark"] .brand img { filter: invert(1); mix-blend-mode: screen; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand img { filter: invert(1); mix-blend-mode: screen; } }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs a { text-decoration: none; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; font-size: 12px;
+  padding: 5px 12px; border: 2px solid transparent; border-radius: 999px; }
+.tabs a:hover { border-color: var(--line); }
+.tabs a.on { background: var(--green); color: #000; border-color: var(--line); box-shadow: 3px 3px 0 var(--shadow); }
+.tools { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Chips, buttons, inputs */
+.chip, button, input[type="date"], select {
+  font: 700 12px Archivo, system-ui, sans-serif; color: var(--ink); background: var(--surface);
+  border: 2px solid var(--line); border-radius: 999px; padding: 5px 12px; box-shadow: 2px 2px 0 var(--shadow);
+  text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+input[type="date"] { font-family: "JetBrains Mono", ui-monospace, monospace; }
+button, select { cursor: pointer; }
+button:hover, a.chip:hover, select:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--shadow); }
+button:active { transform: translate(2px, 2px); box-shadow: none; }
+.chip.ok::before, .chip.partial::before, .chip.failed::before, .chip.running::before { content: "●"; }
+.chip.ok::before { color: var(--green); }
+.chip.partial::before { color: #e0a100; }
+.chip.failed { background: var(--red); color: #fff; }
+.chip.running::before { color: var(--lav); }
+
+/* Layout */
+main { padding: 24px 16px 48px; max-width: 1400px; margin: 0 auto; }
+h1 { font-size: 32px; font-weight: 900; text-transform: uppercase; letter-spacing: -.01em; margin: 0 0 4px; }
+h2 { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; margin: 32px 0 12px; }
+.lbl { text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 700; color: var(--muted); }
+.sub { color: var(--muted); margin: 0; }
+.empty, .note { color: var(--muted); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 16px; }
+
+/* Boxes and KPIs */
+.box { background: var(--surface); border: 2px solid var(--line); border-radius: 6px; box-shadow: 5px 5px 0 var(--shadow); padding: 14px; }
+.kpis { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; }
+.kpis .figure { font-size: 22px; font-weight: 700; }
+.kpis .main { background: var(--green); color: #000; }
+.kpis .main .lbl { color: #000; }
+.kpis .main .figure { font-size: 34px; }
+.kpis .main.loss { background: var(--red); color: #fff; }
+.kpis .main.loss .lbl { color: #fff; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+a.card { display: block; text-decoration: none; transition: transform .08s, box-shadow .08s; }
+a.card:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--shadow); }
+a.card b { font-weight: 900; font-size: 16px; text-transform: uppercase; letter-spacing: .02em; }
+a.card .figure { font-size: 20px; font-weight: 700; margin-top: 6px; }
+a.card .split { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 2px solid var(--line); border-radius: 6px; box-shadow: 5px 5px 0 var(--shadow); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { border: 1.5px solid var(--line); padding: 5px 9px; text-align: left; white-space: nowrap; }
+thead th { position: sticky; top: 0; background: var(--ink); color: var(--bg); text-transform: uppercase; font-size: 11px; letter-spacing: .06em; }
+tbody th { font-weight: 600; }
+.table-wrap table { border-style: hidden; }
+td.num { text-align: right; }
+.neg { color: var(--red); }
+.pos { color: var(--pos); }
+tr.total th, tr.total td { font-weight: 800; background: var(--green-soft); }
+tr.section th { background: var(--surface); font-weight: 900; text-transform: uppercase; letter-spacing: .04em; border-top: 3px solid var(--line); }
+
+/* Payment status */
+.s-paid { background: var(--green-soft); }
+.s-partial { background: var(--lav); }
+.s-forecast { background: repeating-linear-gradient(45deg, transparent 0 5px, var(--hatch) 5px 8px); }
+.legend { display: flex; gap: 8px; }
+
+@media (max-width: 720px) {
+  .kpis { grid-template-columns: 1fr; }
+  .tools { margin-left: 0; }
+  h1 { font-size: 24px; }
+}
+
+/* Login */
+.login { display: flex; flex-direction: column; gap: 12px; padding: 24px; }
+.login .brand { margin-bottom: 8px; }
+.login input[type="password"] { font: 16px "JetBrains Mono", ui-monospace, monospace; color: var(--ink); background: var(--bg);
+  border: 2px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+.login button { justify-content: center; font-size: 14px; padding: 10px; background: var(--green); color: #000; }

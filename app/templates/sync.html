@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Synchronisations</h1>
+<div class="table-wrap" style="margin-top:24px">
+<table>
+  <thead><tr><th>#</th><th>Début</th><th>Fin</th><th>Déclencheur</th><th>Statut</th><th>OK</th><th>Erreurs</th><th>Détail</th></tr></thead>
+  <tbody>
+  {% for r in runs %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.started_at.astimezone().strftime("%d/%m %H:%M:%S") }}</td>
+      <td>{{ r.finished_at.astimezone().strftime("%H:%M:%S") if r.finished_at else "" }}</td>
+      <td>{{ r.trigger }}</td>
+      <td><span class="chip {{ r.status }}">{{ r.status }}</span></td>
+      <td>{{ r.files_ok }}</td><td>{{ r.files_failed }}</td>
+      <td>{% for e in r.errors %}<div><b>{{ e.file or "Source" }}</b> — {{ e.message }}</div>{% endfor %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
