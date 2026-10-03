@@ -1,3 +1,5 @@
+import logging
+import time
 from pathlib import Path
 
 import psycopg
@@ -26,6 +28,16 @@ def connect(**kwargs) -> psycopg.Connection:
     return psycopg.connect(config.DATABASE_URL, row_factory=dict_row, **kwargs)
 
 
-def init_schema() -> None:
-    with connect() as conn:
-        conn.execute((Path(__file__).parent / "schema.sql").read_text())
+def init_schema(timeout: float = 90) -> None:
+    # On a fresh Render Blueprint the database may still be starting, so retry instead of crashing.
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            with connect() as conn:
+                conn.execute((Path(__file__).parent / "schema.sql").read_text())
+            return
+        except psycopg.OperationalError as e:
+            if time.monotonic() > deadline:
+                raise
+            logging.getLogger("cadence.db").warning("database not ready, retrying: %s", e)
+            time.sleep(3)
