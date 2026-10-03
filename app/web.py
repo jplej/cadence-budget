@@ -77,7 +77,7 @@ def login_form(request: Request):
 
 @app.post("/login", response_class=HTMLResponse)
 def login(request: Request, password: str = Form(...)):
-    if config.APP_PASSWORD and hmac.compare_digest(password.encode(), config.APP_PASSWORD.encode()):
+    if config.APP_PASSWORD and hmac.compare_digest(password.strip().encode(), config.APP_PASSWORD.strip().encode()):
         request.session["auth"] = True
         return RedirectResponse("/", status_code=303)
     return templates.TemplateResponse(request, "login.html", {"error": True}, status_code=401)
