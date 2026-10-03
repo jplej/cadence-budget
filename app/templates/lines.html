@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty %}
+{% block content %}
+{% if not data %}{{ empty() }}{% else %}
+<h1>Données brutes</h1>
+<div class="toolbar">
+  <label>Artiste
+    <select name="artist" form="filters" hx-get="/lines" hx-include="#filters" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">
+      <option value="">Tous</option>
+      {% for a in data.artists %}<option value="{{ a }}" {% if a == artist %}selected{% endif %}>{{ display_name(a) }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Type
+    <select name="project_type" form="filters" hx-get="/lines" hx-include="#filters" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">
+      <option value="">Tous</option>
+      {% for t in ["spectacle", "album", "fixe"] %}<option {% if t == project_type %}selected{% endif %}>{{ t }}</option>{% endfor %}
+    </select>
+  </label>
+  <span>{{ data.lines|length }} lignes</span>
+</div>
+<p class="note">Les dates hors année précédente / courante / suivante gardent leur date brute comme colonne de mois (comportement DureVie).</p>
+<div class="table-wrap">
+<table>
+  <thead><tr>{% for c in ["Artiste", "Type", "Projet", "Catégorie", "Commentaire", "Prévision DDV", "Date prévision", "Réel DDV", "Date réel", "Montant retenu", "Statut", "Fichier", "Onglet", "Ligne"] %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in data.lines.itertuples(index=False) %}
+    <tr>{% for v in r %}<td class="{% if neg(v) %}neg{% endif %}">{{ cell(v) if loop.index != 14 else (v|int if v == v and v is not none else "") }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

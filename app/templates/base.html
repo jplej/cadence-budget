@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cadence · Dure Vie</title>
+  <script>try { var t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/?cutoff={{ cutoff }}"><img src="/static/ddv-logo.png" alt="Dure Vie"><b>CADENCE</b></a>
+  <nav class="tabs">
+    {% for href, label, tpl in [("/", "Accueil", "home.html"), ("/projects", "Projets", "projects.html"), ("/fixed", "Fixe", "fixed.html"), ("/cashflow", "Trésorerie", "cashflow.html"), ("/lines", "Données", "lines.html")] %}
+      <a href="{{ href }}?cutoff={{ cutoff }}" {% if page == tpl %}class="on"{% endif %}>{{ label }}</a>
+    {% endfor %}
+    {% if page == "artist.html" %}<a class="on" href="#">{{ display_name(artist) }}</a>{% endif %}
+  </nav>
+  <div class="tools">
+    <form id="filters" hx-get="{{ request.url.path }}" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true" hx-trigger="change">
+      <input type="date" name="cutoff" value="{{ cutoff }}" title="Date de coupure">
+    </form>
+    <span id="sync-status" style="display:contents">
+      {% if run %}
+        <a href="/sync?cutoff={{ cutoff }}" class="chip {{ run.status }}" title="{{ run.files_ok }} fichiers OK, {{ run.files_failed }} en erreur">
+          SYNC {{ run.started_at.astimezone().strftime("%d/%m %H:%M") }}{% if run.files_failed %} · {{ run.files_failed }} ERR{% endif %}
+        </a>
+      {% else %}
+        <span class="chip">JAMAIS SYNC</span>
+      {% endif %}
+      <button hx-post="/sync" hx-target="#sync-status" title="Synchroniser maintenant">⟳</button>
+    </span>
+    {% if logout %}<a class="chip" href="/logout" title="Se déconnecter">⏻</a>{% endif %}
+    <button id="theme-toggle" type="button" title="Mode clair / sombre">☀ / ☾</button>
+  </div>
+</header>
+<main id="main">
+  {% block content %}{% endblock %}
+</main>
+<script>
+  document.getElementById("theme-toggle").addEventListener("click", function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+  });
+</script>
+</body>
+</html>

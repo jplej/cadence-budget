@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import empty %}
+{% block content %}
+{% if not data %}{{ empty() }}{% else %}
+{% set gt = data.grand_total %}
+<h1>Disques Dure Vie</h1>
+<p class="sub">Coupure au {{ cutoff }} — réel jusqu'à cette date, prévision ensuite.</p>
+<h2>Le label</h2>
+<div class="kpis">
+  <div class="box main {% if gt.net < 0 %}loss{% endif %}"><div class="lbl">Résultat net</div><div class="figure">{{ amount(gt.net) }} $</div></div>
+  <div class="box"><div class="lbl">Revenus</div><div class="figure">{{ amount(gt.revenus) }} $</div></div>
+  <div class="box"><div class="lbl">Dépenses</div><div class="figure neg">{{ amount(gt.depenses) }} $</div></div>
+</div>
+<h2>Artistes — {{ cutoff[:4] }}</h2>
+<div class="cards">
+  {% for c in data.cards %}
+    <a class="box card" href="/artist/{{ c.artist }}?cutoff={{ cutoff }}">
+      <b>{{ c.name }}</b>
+      <div class="lbl">{{ c.types }}</div>
+      <div class="figure {% if c.net < 0 %}neg{% else %}pos{% endif %}">{{ "+" if c.net > 0 else "" }}{{ amount(c.net) }} $</div>
+      <div class="split mono"><span>+{{ amount(c.revenus) }}</span><span>{{ amount(c.depenses) if c.depenses else "0,00" }}</span></div>
+    </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,8 @@
+.git
+.venv
+.env
+.superpowers
+saas-starter
+docs
+sample_drive
+**/__pycache__
